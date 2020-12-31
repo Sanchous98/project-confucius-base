@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  go:
+    container_name: backend
+    tty: true
+    image: golang:1.15-alpine
+    volumes:
+      - ./:/go/src/app
+    working_dir: /go/src/app
+    command: go run cmd/main/main.go
+    env_file:
+      - ./.env
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - 80:80
+      - 443:443
+
+  mysql:
+    container_name: database
+    image: mysql:latest
+    environment:
+      - MYSQL_DATABASE=confucius
+      - MYSQL_ROOT_PASSWORD=secret
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    ports:
+      - 3306:3306
+
+  redis:
+    container_name: cache
+    image: redis:alpine
+
+  prometheus:
+    container_name: monitoring
+    image: prom/prometheus:latest
+    ports:
+      - 9090:9090
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
