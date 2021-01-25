@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"gopkg.in/yaml.v2"
-	"os"
+	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 	"testing"
 )
 
@@ -11,28 +11,18 @@ type mockConfig struct {
 	ArrayMock  []interface{} `yaml:"array_mock"`
 }
 
-func (m *mockConfig) HydrateConfig() error {
+func (m *mockConfig) Unmarshall() error {
 	return nil
 }
 
 func TestHydrateConfig(t *testing.T) {
-	workDir, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	config, err := HydrateConfig(&mockConfig{}, workDir+"/test/config/mock.yml", yaml.Unmarshal)
+	config, err := HydrateConfig(&mockConfig{}, "/../test/config/mock.yml", yaml.Unmarshal)
 
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	mock := config.(*mockConfig)
 
-	if mock.TestConfig != "mock" {
-		t.Fatalf("mock.TestConfig expected \"mock\", \"%s\" given", mock.TestConfig)
-	}
-
-	if mock.ArrayMock[0].(string) != "test1" || mock.ArrayMock[1].(string) != "test2" {
-		t.Fatal("mock.ArrayMock has got invalid elements. Expected \"test1\" and \"test2\"")
-	}
+	assert.Equal(t, mock.TestConfig, "mock", "mock.TestConfig expected \"mock\", \"%s\" given", mock.TestConfig)
+	assert.Equal(t, mock.ArrayMock[0].(string), "test1", "mock.ArrayMock has got invalid elements. Expected \"test1\"")
+	assert.Equal(t, mock.ArrayMock[1].(string), "test2", "mock.ArrayMock has got invalid elements. Expected \"test2\"")
 }
