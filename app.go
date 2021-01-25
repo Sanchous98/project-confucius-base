@@ -2,15 +2,13 @@ package confucius
 
 import (
 	"github.com/Sanchous98/project-confucius-base/src"
-	"github.com/Sanchous98/project-confucius-base/utils"
 	"github.com/joho/godotenv"
 )
 
 type Application struct {
-	environment  string
-	variables    map[string]string
-	Container    src.Container
-	ErrorHandler utils.ErrorHandler
+	environment string
+	variables   map[string]string
+	Container   src.Container
 }
 
 func NewApplication(environment string) *Application {
@@ -19,10 +17,6 @@ func NewApplication(environment string) *Application {
 	app.Container = src.NewContainer()
 
 	return app
-}
-
-func (a *Application) SetErrorHandler(handler utils.ErrorHandler) {
-	a.ErrorHandler = handler
 }
 
 func (a *Application) SetEnvironment(name string) {

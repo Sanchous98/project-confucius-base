@@ -1,7 +1,6 @@
 package src
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -18,13 +17,13 @@ type (
 
 	Launchable interface {
 		Service
-		Launch() error
-		Shutdown() error
+		Launch(chan<- error)
+		Shutdown(chan<- error)
 	}
 
 	Launcher interface {
 		Launch()
-		Shutdown()
+		Shutdown(chan<- error)
 	}
 
 	// Basic Container interface
@@ -77,54 +76,39 @@ func (s *serviceContainer) drop(abstraction reflect.Type) {
 }
 
 func (s *serviceContainer) Launch() {
-	s.make()
 	err := make(chan error)
-	// SIGINT/SIGTERM handling
 	osSignals := make(chan os.Signal)
 	signal.Notify(osSignals, syscall.SIGINT, syscall.SIGTERM)
-
-	for _, service := range s.services {
-		switch service.service.(type) {
-		case Launchable:
-			err <- service.service.(Launchable).Launch()
-		}
-	}
-
-	for {
-		select {
-		case errors := <-err:
-			if errors != nil {
-				log.Fatal(errors)
-			}
-			os.Exit(0)
-		case <-osSignals:
-			fmt.Printf("\n")
-			log.Print("Shutdown signal received.\n")
-			s.Shutdown()
-			log.Printf("Server gracefully stopped.\n")
-		}
-	}
-}
-
-func (s serviceContainer) Shutdown() {
-	err := make(chan error)
-	for _, service := range s.services {
-		switch service.service.(type) {
-		case Launchable:
-			err <- service.service.(Launchable).Shutdown()
-		}
-
-		select {
-		case errors := <-err:
-			if errors != nil {
-				log.Fatalf("error with graceful close: %s", err)
-			}
-		}
-	}
-}
-
-func (s *serviceContainer) make() {
 	for _, service := range s.services {
 		service.Make(s)
+	}
+
+	for _, service := range s.services {
+		switch service.service.(type) {
+		case Launchable:
+			go service.service.(Launchable).Launch(err)
+		}
+	}
+
+	select {
+	case <-osSignals:
+		log.Print("\nShutdown signal received.")
+		s.Shutdown(err)
+		log.Print("\nServer gracefully stopped.\n")
+		os.Exit(0)
+	case errors := <-err:
+		if errors != nil {
+			s.Shutdown(err)
+			log.Fatal(errors)
+		}
+	}
+}
+
+func (s serviceContainer) Shutdown(err chan<- error) {
+	for _, service := range s.services {
+		switch service.service.(type) {
+		case Launchable:
+			go service.service.(Launchable).Shutdown(err)
+		}
 	}
 }

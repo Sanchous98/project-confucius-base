@@ -40,10 +40,12 @@ func (w *Web) Make(src.Container) src.Service {
 	return w
 }
 
-func (w *Web) Launch() error {
+func (w *Web) Launch(err chan<- error) {
 	// Let's Encrypt tls-alpn-01 only works on Port 443.
-	ln, _ := net.Listen("tcp4", w.config.getFullAddress())
-
+	ln, e := net.Listen("tcp4", w.config.getFullAddress())
+	if e != nil {
+		err <- e
+	}
 	lnTls := tls.NewListener(ln, w.TLSConfig)
 	if w.config.Compression.Enabled {
 		fasthttp.CompressHandlerBrotliLevel(w.Router.Handler, w.config.Compression.Level, w.config.Compression.Level)
@@ -54,11 +56,9 @@ func (w *Web) Launch() error {
 	}
 
 	log.Print("Server started")
-	return w.Server.Serve(lnTls)
+	err <- w.Server.Serve(lnTls)
 }
 
-func (w *Web) Shutdown() error {
+func (w *Web) Shutdown(chan<- error) {
 	w.Server.DisableKeepalive = true
-
-	return nil
 }
