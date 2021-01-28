@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Sanchous98/project-confucius-base/service/web"
-	"github.com/Sanchous98/project-confucius-base/src"
 	tools "github.com/bhoriuchi/graphql-go-tools"
-	"github.com/fasthttp/router"
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
 	"github.com/valyala/fasthttp"
@@ -14,7 +12,6 @@ import (
 	"io/ioutil"
 	"log"
 	"reflect"
-	"sync"
 )
 
 type (
@@ -32,14 +29,13 @@ type (
 	VisitInputFieldDefinition = func(*graphql.InputObjectFieldConfig, map[string]interface{})
 
 	GraphQL struct {
-		sync.Mutex
 		config     *config
 		directives tools.SchemaDirectiveVisitorMap
-		router     *router.Router
+		web        *web.Web
 	}
 )
 
-func (g *GraphQL) Make(container src.Container) src.Service {
+func (g *GraphQL) Construct(web *web.Web) *GraphQL {
 	g.config = new(config)
 	err := g.config.Unmarshall()
 
@@ -47,7 +43,8 @@ func (g *GraphQL) Make(container src.Container) src.Service {
 		panic(err)
 	}
 
-	g.router = container.Get(reflect.TypeOf(web.Web{})).(*web.Web).Router
+	g.web = web
+
 	if g.directives == nil {
 		g.directives = make(tools.SchemaDirectiveVisitorMap)
 	}
@@ -56,8 +53,8 @@ func (g *GraphQL) Make(container src.Container) src.Service {
 		g.AddDirective(name, directive)
 	}
 
-	g.router.GET("/api", g.queryHandler)
-	g.router.GET("/graphiql", g.handleGraphiQL(g.config.SchemaPath))
+	g.web.Router.GET("/api", g.queryHandler)
+	g.web.Router.GET("/graphiql", g.handleGraphiQL(g.config.SchemaPath))
 
 	return g
 }
