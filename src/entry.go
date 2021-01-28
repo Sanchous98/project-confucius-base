@@ -1,39 +1,43 @@
 package src
 
 import (
+	"github.com/Sanchous98/project-confucius-base/utils"
 	"reflect"
 	"sync"
 )
 
+const constructorName = "Construct"
+
 // containerEntry is a wrapper for services to use binding by abstraction and singletons
 type containerEntry struct {
-	sync.Mutex
-	service             Service
-	IsSingleton, isMade bool
-	Abstraction         reflect.Type
+	sync.RWMutex
+	service     interface{}
+	Abstraction reflect.Type
 }
 
-func NewEntry(abstraction reflect.Type, service Service, isSingleton bool) *containerEntry {
+func NewEntry(abstraction reflect.Type, service interface{}) *containerEntry {
 	return &containerEntry{
 		Abstraction: abstraction,
 		service:     service,
-		IsSingleton: isSingleton,
 	}
 }
 
-func (c *containerEntry) Make(container Container) Service {
-	if !c.IsSingleton {
-		c.service = reflect.New(reflect.ValueOf(c.service).Elem().Type()).Interface().(Service)
+func (c *containerEntry) Make(container Container) interface{} {
+	c.Lock()
+	defer c.Unlock()
 
-		return c.service.Make(container)
+	if !utils.HasFunction(c.service, constructorName) {
+		return c.service
 	}
 
-	if !c.isMade {
-		c.Lock()
-		c.service.Make(container)
-		c.isMade = true
-		c.Unlock()
+	in := utils.GetFunctionParamsTypes(c.service, constructorName)
+	params := make(map[string]interface{}, len(in))
+
+	for _, paramType := range in {
+		params[paramType.String()] = container.Get(paramType)
 	}
+
+	utils.CallFunction(c.service, constructorName, params)
 
 	return c.service
 }

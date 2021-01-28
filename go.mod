@@ -8,6 +8,7 @@ require (
 	github.com/graphql-go/graphql v0.7.9
 	github.com/graphql-go/handler v0.2.3
 	github.com/joho/godotenv v1.3.0
+	github.com/prometheus/client_golang v1.9.0
 	github.com/stretchr/testify v1.7.0
 	github.com/valyala/fasthttp v1.19.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad

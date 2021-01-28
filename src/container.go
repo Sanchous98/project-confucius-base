@@ -5,18 +5,11 @@ import (
 	"os"
 	"os/signal"
 	"reflect"
-	"sync"
 	"syscall"
 )
 
 type (
-	Service interface {
-		sync.Locker
-		Make(Container) Service
-	}
-
 	Launchable interface {
-		Service
 		Launch(chan<- error)
 		Shutdown(chan<- error)
 	}
@@ -28,9 +21,10 @@ type (
 
 	// Basic Container interface
 	Container interface {
-		Get(reflect.Type) Service
+		Get(reflect.Type) interface{}
 		Has(reflect.Type) bool
-		Set(reflect.Type, Service, bool)
+		Set(reflect.Type, interface{})
+		Inject(interface{})
 		Launcher
 	}
 
@@ -43,12 +37,12 @@ func NewContainer() *serviceContainer {
 	return &serviceContainer{make([]*containerEntry, 0)}
 }
 
-func (s *serviceContainer) Set(abstraction reflect.Type, service Service, singleton bool) {
+func (s *serviceContainer) Set(abstraction reflect.Type, service interface{}) {
 	s.drop(abstraction)
-	s.services = append(s.services, NewEntry(abstraction, service, singleton))
+	s.services = append(s.services, NewEntry(abstraction, service))
 }
 
-func (s *serviceContainer) Get(abstraction reflect.Type) Service {
+func (s *serviceContainer) Get(abstraction reflect.Type) interface{} {
 	for _, service := range s.services {
 		if service.Abstraction == abstraction {
 			return service.Make(s)
@@ -56,6 +50,10 @@ func (s *serviceContainer) Get(abstraction reflect.Type) Service {
 	}
 
 	return nil
+}
+
+func (s *serviceContainer) Inject(service interface{}) {
+	service = s.Get(reflect.TypeOf(service))
 }
 
 func (s *serviceContainer) Has(abstraction reflect.Type) bool {

@@ -2,18 +2,15 @@ package web
 
 import (
 	"crypto/tls"
-	"github.com/Sanchous98/project-confucius-base/src"
 	"github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 	"log"
 	"net"
-	"sync"
 )
 
 type Web struct {
-	sync.Mutex
 	config      *config
 	Server      *fasthttp.Server
 	Router      *router.Router
@@ -21,7 +18,7 @@ type Web struct {
 	TLSConfig   *tls.Config
 }
 
-func (w *Web) Make(src.Container) src.Service {
+func (w *Web) Construct() *Web {
 	w.config = new(config)
 	_ = w.config.Unmarshall()
 

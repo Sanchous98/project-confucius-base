@@ -15,7 +15,7 @@ type MockService struct {
 	mockData int
 }
 
-func (m *MockService) Make(Container) Service {
+func (m *MockService) Make(Container) *MockService {
 	return m
 }
 
@@ -23,7 +23,7 @@ func (m *MockService) Make(Container) Service {
 // Pointer values must not change after second call of getter.
 func TestSingletonBinding(t *testing.T) {
 	mock := new(MockService)
-	container.Set(reflect.TypeOf(mock), mock, true)
+	container.Set(reflect.TypeOf(mock), mock)
 
 	assert.True(t, container.Has(reflect.TypeOf(mock)))
 
@@ -37,7 +37,7 @@ func TestSingletonBinding(t *testing.T) {
 // Pointer values must not change after second call of getter
 func TestMultitonBinding(t *testing.T) {
 	mock := new(MockService)
-	container.Set(reflect.TypeOf(mock), mock, false)
+	container.Set(reflect.TypeOf(mock), mock)
 
 	assert.True(t, container.Has(reflect.TypeOf(mock)))
 
@@ -49,7 +49,7 @@ func TestMultitonBinding(t *testing.T) {
 
 func TestMute(t *testing.T) {
 	mock := new(MockService)
-	container.Set(reflect.TypeOf(mock), mock, true)
+	container.Set(reflect.TypeOf(mock), mock)
 	mock2 := container.Get(reflect.TypeOf(mock)).(*MockService)
 
 	assert.True(t, container.Has(reflect.TypeOf(mock)))

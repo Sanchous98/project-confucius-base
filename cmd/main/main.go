@@ -5,17 +5,18 @@ import (
 	"github.com/Sanchous98/project-confucius-base/service/graphql"
 	"github.com/Sanchous98/project-confucius-base/service/static"
 	"github.com/Sanchous98/project-confucius-base/service/web"
+	"log"
 	"reflect"
+	"unsafe"
 )
-
-var application = confucius.NewApplication("example")
 
 func main() {
 	webService := web.Web{}
 	staticService := static.Static{}
 	graphqlService := graphql.GraphQL{}
-	application.Container.Set(reflect.TypeOf(webService), &webService, true)
-	application.Container.Set(reflect.TypeOf(staticService), &staticService, true)
-	application.Container.Set(reflect.TypeOf(graphqlService), &graphqlService, true)
-	application.Container.Launch()
+	log.Print(unsafe.Pointer(&webService))
+	confucius.App().Container.Set(reflect.TypeOf(webService), &webService)
+	confucius.App().Container.Set(reflect.TypeOf(staticService), &staticService)
+	confucius.App().Container.Set(reflect.TypeOf(graphqlService), &graphqlService)
+	confucius.App().Container.Launch()
 }
