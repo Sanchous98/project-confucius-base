@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Sanchous98/project-confucius-base/service/web"
+	"github.com/Sanchous98/project-confucius-base/src"
 	tools "github.com/bhoriuchi/graphql-go-tools"
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
@@ -35,7 +36,7 @@ type (
 	}
 )
 
-func (g *GraphQL) Construct(web *web.Web) *GraphQL {
+func (g *GraphQL) Make(container src.Container) src.Service {
 	g.config = new(config)
 	err := g.config.Unmarshall()
 
@@ -43,7 +44,7 @@ func (g *GraphQL) Construct(web *web.Web) *GraphQL {
 		panic(err)
 	}
 
-	g.web = web
+	g.web = container.Get(&web.Web{}).(*web.Web)
 
 	if g.directives == nil {
 		g.directives = make(tools.SchemaDirectiveVisitorMap)

@@ -9,6 +9,10 @@ import (
 )
 
 type (
+	Service interface {
+		Make(Container) Service
+	}
+
 	Launchable interface {
 		Launch(chan<- error)
 		Shutdown(chan<- error)
@@ -21,10 +25,9 @@ type (
 
 	// Basic Container interface
 	Container interface {
-		Get(reflect.Type) interface{}
-		Has(reflect.Type) bool
-		Set(reflect.Type, interface{})
-		Inject(interface{})
+		Get(Service) Service
+		Has(Service) bool
+		Set(Service)
 		Launcher
 	}
 
@@ -37,14 +40,13 @@ func NewContainer() *serviceContainer {
 	return &serviceContainer{make([]*containerEntry, 0)}
 }
 
-func (s *serviceContainer) Set(abstraction reflect.Type, service interface{}) {
-	s.drop(abstraction)
-	s.services = append(s.services, NewEntry(abstraction, service))
+func (s *serviceContainer) Set(service Service) {
+	s.services = append(s.services, NewEntry(reflect.TypeOf(service), service))
 }
 
-func (s *serviceContainer) Get(abstraction reflect.Type) interface{} {
+func (s *serviceContainer) Get(abstraction Service) Service {
 	for _, service := range s.services {
-		if service.Abstraction == abstraction {
+		if service.Abstraction == reflect.TypeOf(abstraction) {
 			return service.Make(s)
 		}
 	}
@@ -52,21 +54,17 @@ func (s *serviceContainer) Get(abstraction reflect.Type) interface{} {
 	return nil
 }
 
-func (s *serviceContainer) Inject(service interface{}) {
-	service = s.Get(reflect.TypeOf(service))
-}
-
-func (s *serviceContainer) Has(abstraction reflect.Type) bool {
+func (s *serviceContainer) Has(abstraction Service) bool {
 	return s.Get(abstraction) != nil
 }
 
-func (s *serviceContainer) drop(abstraction reflect.Type) {
+func (s *serviceContainer) drop(abstraction Service) {
 	if !s.Has(abstraction) {
 		return
 	}
 
 	for index, service := range s.services {
-		if service.Abstraction == abstraction {
+		if service.Abstraction == reflect.TypeOf(abstraction) {
 			s.services = append(s.services[:index], s.services[index+1:]...)
 			return
 		}

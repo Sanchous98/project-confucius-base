@@ -2,6 +2,7 @@ package web
 
 import (
 	"crypto/tls"
+	"github.com/Sanchous98/project-confucius-base/src"
 	"github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
 	"golang.org/x/crypto/acme"
@@ -18,7 +19,7 @@ type Web struct {
 	TLSConfig   *tls.Config
 }
 
-func (w *Web) Construct() *Web {
+func (w *Web) Make(src.Container) src.Service {
 	w.config = new(config)
 	_ = w.config.Unmarshall()
 
@@ -40,9 +41,11 @@ func (w *Web) Construct() *Web {
 func (w *Web) Launch(err chan<- error) {
 	// Let's Encrypt tls-alpn-01 only works on Port 443.
 	ln, e := net.Listen("tcp4", w.config.getFullAddress())
+
 	if e != nil {
 		err <- e
 	}
+
 	lnTls := tls.NewListener(ln, w.TLSConfig)
 	if w.config.Compression.Enabled {
 		fasthttp.CompressHandlerBrotliLevel(w.Router.Handler, w.config.Compression.Level, w.config.Compression.Level)

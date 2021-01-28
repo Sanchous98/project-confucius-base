@@ -10,14 +10,13 @@ import (
 )
 
 type Metrics struct {
-	sync.Mutex
 	Registry   *prometheus.Registry
 	Collectors sync.Map
 	web        *web.Web
 }
 
-func (m *Metrics) Construct(container src.Container) *Metrics {
-	container.Inject(m.web)
+func (m *Metrics) Make(container src.Container) src.Service {
+	m.web = container.Get(&web.Web{}).(*web.Web)
 	m.web.Router.GET("/metrics", fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()))
 
 	return m

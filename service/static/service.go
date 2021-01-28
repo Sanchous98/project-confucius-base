@@ -2,25 +2,24 @@ package static
 
 import (
 	"github.com/Sanchous98/project-confucius-base/service/web"
+	"github.com/Sanchous98/project-confucius-base/src"
 	"github.com/valyala/fasthttp"
-	"log"
-	"unsafe"
 )
 
 type Static struct {
-	web    web.Web
+	web    *web.Web
 	config *config
 }
 
-func (s *Static) Construct(web web.Web) *Static {
+func (s *Static) Make(container src.Container) src.Service {
 	s.config = new(config)
 	err := s.config.Unmarshall()
-	log.Print(unsafe.Pointer(&web))
+
 	if err != nil {
 		panic(err)
 	}
 
-	s.web = web
+	s.web = container.Get(&web.Web{}).(*web.Web)
 	s.web.Router.ServeFilesCustom("/{filepath:*}", &fasthttp.FS{
 		Root:               s.config.Path,
 		IndexNames:         []string{"index.html"},
