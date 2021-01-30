@@ -8,11 +8,8 @@ import (
 )
 
 func main() {
-	webService := web.Web{}
-	staticService := static.Static{}
-	graphqlService := graphql.GraphQL{}
-	confucius.App().Container.Set(&webService)
-	confucius.App().Container.Set(&staticService)
-	confucius.App().Container.Set(&graphqlService)
+	confucius.App().Container.Set(&web.Web{})
+	confucius.App().Container.Set(&static.Static{})
+	confucius.App().Container.Set(&graphql.GraphQL{})
 	confucius.App().Container.Launch()
 }
