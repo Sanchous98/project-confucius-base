@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+var mock = []byte("test_config: mock\narray_mock:\n  - test1\n  - test2\n  - sub_array:\n      - test3\n      - test4")
+
 type mockConfig struct {
 	TestConfig string        `yaml:"test_config"`
 	ArrayMock  []interface{} `yaml:"array_mock"`
@@ -16,7 +18,7 @@ func (m *mockConfig) Unmarshall() error {
 }
 
 func TestHydrateConfig(t *testing.T) {
-	config, err := HydrateConfig(&mockConfig{}, "/../test/config/Mock.yml", yaml.Unmarshal)
+	config, err := HydrateConfig(&mockConfig{}, mock, yaml.Unmarshal)
 
 	assert.NoError(t, err)
 

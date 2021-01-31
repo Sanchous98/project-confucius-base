@@ -2,11 +2,10 @@ package utils
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 )
 
-func CallFunction(i interface{}, name string, args map[string]interface{}) []reflect.Value {
+func CallFunction(i interface{}, name string, args []interface{}) []reflect.Value {
 	if !HasFunction(i, name) {
 		panic(fmt.Sprintf("Function %s doesn't exist", reflect.TypeOf(i).Name()+name))
 	}
@@ -19,8 +18,7 @@ func CallFunction(i interface{}, name string, args map[string]interface{}) []ref
 	}
 
 	for k := 0; k < len(in); k++ {
-		tt := method.Type().In(k)
-		in[k] = reflect.ValueOf(args[tt.String()])
+		in[k] = reflect.ValueOf(args[k])
 	}
 
 	return method.Call(in)
@@ -28,11 +26,15 @@ func CallFunction(i interface{}, name string, args map[string]interface{}) []ref
 
 func HasFunction(i interface{}, name string) bool {
 	_, ok := reflect.TypeOf(i).MethodByName(name)
-	log.Print(reflect.TypeOf(i).MethodByName(name))
+
+	if !ok && reflect.Ptr == reflect.TypeOf(i).Kind() {
+		_, ok = reflect.ValueOf(i).Type().MethodByName(name)
+	}
+
 	return ok
 }
 
-func GetFunctionParamsTypes(i interface{}, name string) []reflect.Type {
+func GetMethodParamsTypes(i interface{}, name string) []reflect.Type {
 	method := reflect.ValueOf(i).MethodByName(name)
 	in := make([]reflect.Type, method.Type().NumIn())
 

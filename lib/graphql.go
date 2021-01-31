@@ -1,19 +1,28 @@
-package graphql
+package lib
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Sanchous98/project-confucius-base/service/web"
+	appGraphql "github.com/Sanchous98/project-confucius-base/lib/graphql"
 	"github.com/Sanchous98/project-confucius-base/src"
+	"github.com/Sanchous98/project-confucius-base/utils"
 	tools "github.com/bhoriuchi/graphql-go-tools"
 	"github.com/graphql-go/graphql"
 	"github.com/graphql-go/handler"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
+	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
+	"path/filepath"
 	"reflect"
 )
+
+var preDefinedDirectives = map[string]interface{}{
+	"isGranted": appGraphql.IsGranted,
+}
+
+const graphQLConfigPath = "config/graphql.yaml"
 
 type (
 	// Type aliases for visitor functions
@@ -29,22 +38,40 @@ type (
 	VisitInputObject          = func(*graphql.InputObjectConfig, map[string]interface{})
 	VisitInputFieldDefinition = func(*graphql.InputObjectFieldConfig, map[string]interface{})
 
+	graphQLConfig struct {
+		SchemaPath string `yaml:"schema_path"`
+	}
+
 	GraphQL struct {
-		config     *config
+		config     *graphQLConfig
 		directives tools.SchemaDirectiveVisitorMap
-		web        *web.Web
+		web        *Web
 	}
 )
 
+func (gqlc *graphQLConfig) Unmarshall() error {
+	absPath, _ := filepath.Abs(graphQLConfigPath)
+	content, err := ioutil.ReadFile(absPath)
+	cfg, err := utils.HydrateConfig(gqlc, content, yaml.Unmarshal)
+
+	if err != nil {
+		return err
+	}
+
+	gqlc = cfg.(*graphQLConfig)
+
+	return nil
+}
+
 func (g *GraphQL) Make(container src.Container) src.Service {
-	g.config = new(config)
+	g.config = new(graphQLConfig)
 	err := g.config.Unmarshall()
 
 	if err != nil {
 		panic(err)
 	}
 
-	g.web = container.Get(&web.Web{}).(*web.Web)
+	g.web = container.Get(&Web{}).(*Web)
 
 	if g.directives == nil {
 		g.directives = make(tools.SchemaDirectiveVisitorMap)

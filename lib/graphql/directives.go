@@ -5,10 +5,6 @@ import (
 	"github.com/graphql-go/graphql"
 )
 
-var preDefinedDirectives = map[string]interface{}{
-	"isGranted": IsGranted,
-}
-
 func IsGranted(field *graphql.Field, args map[string]interface{}) {
 	resolveFunc := field.Resolve
 	field.Resolve = func(p graphql.ResolveParams) (interface{}, error) {
