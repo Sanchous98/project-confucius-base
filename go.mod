@@ -5,6 +5,7 @@ go 1.15
 require (
 	github.com/bhoriuchi/graphql-go-tools v0.0.1
 	github.com/fasthttp/router v1.3.5
+	github.com/fatih/color v1.10.0
 	github.com/graphql-go/graphql v0.7.9
 	github.com/graphql-go/handler v0.2.3
 	github.com/joho/godotenv v1.3.0

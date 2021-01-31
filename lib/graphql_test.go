@@ -1,4 +1,4 @@
-package graphql
+package lib
 
 import (
 	tools "github.com/bhoriuchi/graphql-go-tools"

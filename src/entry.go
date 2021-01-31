@@ -5,6 +5,8 @@ import (
 	"sync"
 )
 
+const ConstructorMethodName = "Constructor"
+
 // containerEntry is a wrapper for services to use binding by abstraction and singletons
 type containerEntry struct {
 	sync.RWMutex

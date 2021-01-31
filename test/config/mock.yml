@@ -1,7 +1,0 @@
-test_config: mock
-array_mock:
-  - test1
-  - test2
-  - sub_array:
-      - test3
-      - test4
