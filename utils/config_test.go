@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-var mock = []byte("test_config: mock\narray_mock:\n  - test1\n  - test2\n  - sub_array:\n      - test3\n      - test4")
+const testConfigPath = "testdata/test_config.yaml"
 
 type mockConfig struct {
 	TestConfig string        `yaml:"test_config"`
@@ -18,13 +18,11 @@ func (m *mockConfig) Unmarshall() error {
 }
 
 func TestHydrateConfig(t *testing.T) {
-	config, err := HydrateConfig(&mockConfig{}, mock, yaml.Unmarshal)
+	var mock mockConfig
+	err := Unmarshall(&mock, testConfigPath, yaml.Unmarshal)
 
 	assert.NoError(t, err)
-
-	mock := config.(*mockConfig)
-
-	assert.Equal(t, mock.TestConfig, "Mock", "Mock.TestConfig expected \"Mock\", \"%s\" given", mock.TestConfig)
-	assert.Equal(t, mock.ArrayMock[0].(string), "test1", "Mock.ArrayMock has got invalid elements. Expected \"test1\"")
-	assert.Equal(t, mock.ArrayMock[1].(string), "test2", "Mock.ArrayMock has got invalid elements. Expected \"test2\"")
+	assert.Equal(t, "mock", mock.TestConfig, "Mock.TestConfig expected \"Mock\", \"%s\" given", mock.TestConfig)
+	assert.Equal(t, "test1", mock.ArrayMock[0].(string), "Mock.ArrayMock has got invalid elements. Expected \"test1\"")
+	assert.Equal(t, "test2", mock.ArrayMock[1].(string), "Mock.ArrayMock has got invalid elements. Expected \"test2\"")
 }

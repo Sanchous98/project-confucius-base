@@ -1,12 +1,9 @@
-package lib
+package stdlib
 
 import (
-	"github.com/Sanchous98/project-confucius-base/src"
 	"github.com/Sanchous98/project-confucius-base/utils"
 	"github.com/valyala/fasthttp"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
-	"path/filepath"
 )
 
 const staticConfigPath = "config/static.yaml"
@@ -17,41 +14,34 @@ type (
 	}
 
 	Static struct {
-		web    *Web
+		Web    *Web `inject:""`
+		Log    *Log `inject:""`
 		config *staticConfig
 	}
 )
 
 func (c *staticConfig) Unmarshall() error {
-	absPath, _ := filepath.Abs(staticConfigPath)
-	content, err := ioutil.ReadFile(absPath)
-	cfg, err := utils.HydrateConfig(c, content, yaml.Unmarshal)
-
-	if err != nil {
-		return err
-	}
-
-	c = cfg.(*staticConfig)
-
-	return nil
+	return utils.Unmarshall(c, staticConfigPath, yaml.Unmarshal)
 }
 
-func (s *Static) Make(container src.Container) src.Service {
+func (s *Static) Constructor() {
 	s.config = new(staticConfig)
 	err := s.config.Unmarshall()
 
 	if err != nil {
-		panic(err)
+		s.Log.Critical(err)
 	}
 
-	s.web = container.Get(&Web{}).(*Web)
-	s.web.Router.ServeFilesCustom("/{filepath:*}", &fasthttp.FS{
+	fs := &fasthttp.FS{
 		Root:               s.config.Path,
 		IndexNames:         []string{"index.html"},
 		GenerateIndexPages: true,
 		AcceptByteRange:    true,
 		CompressBrotli:     true,
-	})
+	}
 
-	return s
+	fs.PathRewrite = fasthttp.NewVHostPathRewriter(0)
+	s.Web.Router.ServeFilesCustom("/{filepath:*}", fs)
 }
+
+func (s *Static) Destructor() {}

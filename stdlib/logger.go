@@ -1,18 +1,18 @@
-package lib
+package stdlib
 
 import (
+	"fmt"
 	"github.com/Sanchous98/project-confucius-base/utils"
 	"github.com/fatih/color"
 	"gopkg.in/yaml.v3"
 	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
+	"syscall"
 )
 
+const loggerConfigPath = "config/logger.yaml"
+
 const (
-	loggerConfigPath       = "config/logger.yaml"
-	debugLevel       level = 1 << iota
+	debugLevel level = 1 << iota
 	infoLevel
 	noticeLevel
 	warningLevel
@@ -23,7 +23,7 @@ const (
 )
 
 type (
-	level uint16
+	level uint8
 
 	Logger interface {
 		Log(level, error, ...interface{})
@@ -49,27 +49,24 @@ type (
 )
 
 func (c *loggerConfig) Unmarshall() error {
-	absPath, _ := filepath.Abs(loggerConfigPath)
-	content, err := ioutil.ReadFile(absPath)
-	cfg, err := utils.HydrateConfig(c, content, yaml.Unmarshal)
-
-	if err != nil {
-		return err
-	}
-
-	c = cfg.(*loggerConfig)
-
-	return nil
+	return utils.Unmarshall(c, loggerConfigPath, yaml.Unmarshal)
 }
 
-func (l *Log) Construct() {
+func (l *Log) Constructor() {
 	l.config = new(loggerConfig)
 	_ = l.config.Unmarshall()
+	l.recover = func(i ...interface{}) {
+		if recoveryMessage := recover(); recoveryMessage != nil {
+			l.Critical(fmt.Errorf("%s", recoveryMessage), i)
+		}
+	}
 }
 
-func (l Log) Channel(channel string) *Log {
+func (l *Log) Destructor() {}
+
+func (l *Log) Channel(channel string) *Log {
 	log := new(Log)
-	log.Construct()
+	log.Constructor()
 	log.channel = log.config.Channels[channel]
 
 	return log
@@ -96,6 +93,7 @@ func (l *Log) Log(level level, message error, context ...interface{}) {
 	default:
 		color.White(message.Error(), context)
 	}
+	fmt.Println()
 }
 
 func (l *Log) Debug(message error, context ...interface{}) {
@@ -124,10 +122,14 @@ func (l *Log) Critical(message error, context ...interface{}) {
 
 func (l *Log) Alert(message error, context ...interface{}) {
 	l.Log(alertLevel, message, context)
-	l.recover(context)
+	defer l.recover(context)
+	panic(message.Error())
 }
 
 func (l *Log) Emergency(message error, context ...interface{}) {
 	l.Log(emergencyLevel, message, context)
-	os.Exit(1)
+	err := syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+	if err != nil {
+		return
+	}
 }
