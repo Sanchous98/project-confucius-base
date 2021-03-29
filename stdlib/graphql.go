@@ -1,10 +1,9 @@
-package lib
+package stdlib
 
 import (
 	"encoding/json"
 	"fmt"
-	appGraphql "github.com/Sanchous98/project-confucius-base/lib/graphql"
-	"github.com/Sanchous98/project-confucius-base/src"
+	appGraphql "github.com/Sanchous98/project-confucius-base/stdlib/graphql"
 	"github.com/Sanchous98/project-confucius-base/utils"
 	tools "github.com/bhoriuchi/graphql-go-tools"
 	"github.com/graphql-go/graphql"
@@ -45,33 +44,22 @@ type (
 	GraphQL struct {
 		config     *graphQLConfig
 		directives tools.SchemaDirectiveVisitorMap
-		web        *Web
+		Web        *Web `inject:""`
+		Log        *Log `inject:""`
 	}
 )
 
-func (gqlc *graphQLConfig) Unmarshall() error {
-	absPath, _ := filepath.Abs(graphQLConfigPath)
-	content, err := ioutil.ReadFile(absPath)
-	cfg, err := utils.HydrateConfig(gqlc, content, yaml.Unmarshal)
-
-	if err != nil {
-		return err
-	}
-
-	gqlc = cfg.(*graphQLConfig)
-
-	return nil
+func (c *graphQLConfig) Unmarshall() error {
+	return utils.Unmarshall(c, graphQLConfigPath, yaml.Unmarshal)
 }
 
-func (g *GraphQL) Make(container src.Container) src.Service {
+func (g *GraphQL) Constructor() {
 	g.config = new(graphQLConfig)
 	err := g.config.Unmarshall()
 
 	if err != nil {
 		panic(err)
 	}
-
-	g.web = container.Get(&Web{}).(*Web)
 
 	if g.directives == nil {
 		g.directives = make(tools.SchemaDirectiveVisitorMap)
@@ -81,11 +69,11 @@ func (g *GraphQL) Make(container src.Container) src.Service {
 		g.AddDirective(name, directive)
 	}
 
-	g.web.Router.GET("/api", g.queryHandler)
-	g.web.Router.GET("/graphiql", g.handleGraphiQL(g.config.SchemaPath))
-
-	return g
+	g.Web.Router.GET("/api", g.queryHandler)
+	g.Web.Router.GET("/graphiql", g.handleGraphiQL(g.config.SchemaPath))
 }
+
+func (g *GraphQL) Destructor() {}
 
 // resolveSchema initializes GraphQL server configuration, based on schema file and predefined resolvers and directives
 func (g *GraphQL) resolveSchema(schemaContent []byte) *graphql.Schema {
@@ -95,7 +83,7 @@ func (g *GraphQL) resolveSchema(schemaContent []byte) *graphql.Schema {
 	})
 
 	if err != nil {
-		panic(fmt.Sprintf("Failed to parse schema, error: %v", err))
+		g.Log.Alert(fmt.Errorf("failed to parse schema, error: %v", err))
 	}
 
 	return &schema
@@ -103,10 +91,16 @@ func (g *GraphQL) resolveSchema(schemaContent []byte) *graphql.Schema {
 
 // handleGraphiQL provides GraphiQL playground
 func (g *GraphQL) handleGraphiQL(schemaPath string) fasthttp.RequestHandler {
-	b, err := ioutil.ReadFile(schemaPath)
+	file, err := filepath.Abs(schemaPath)
 
 	if err != nil {
-		panic(fmt.Errorf("cannot open schema file: %v\n", err))
+		g.Log.Alert(err)
+	}
+
+	b, err := ioutil.ReadFile(file)
+
+	if err != nil {
+		g.Log.Alert(fmt.Errorf("cannot open schema file: %v\n", err))
 	}
 
 	return fasthttpadaptor.NewFastHTTPHandler(handler.New(&handler.Config{
@@ -120,8 +114,9 @@ func (g *GraphQL) handleGraphiQL(schemaPath string) fasthttp.RequestHandler {
 // queryHandler is a function that handles GraphQL queries
 func (g *GraphQL) queryHandler(context *fasthttp.RequestCtx) {
 	b, err := ioutil.ReadFile(g.config.SchemaPath)
+
 	if err != nil {
-		panic("Schema file doesn't exist")
+		g.Log.Alert(fmt.Errorf("schema file doesn't exist"))
 	}
 
 	query := context.Request.Body()
@@ -132,7 +127,7 @@ func (g *GraphQL) queryHandler(context *fasthttp.RequestCtx) {
 	})
 
 	if len(response.Errors) > 0 {
-		log.Printf("Failed to execute graphql operation, errors: %+v", response.Errors)
+		g.Log.Info(fmt.Errorf("failed to execute graphql operation, errors: %+v", response.Errors))
 	}
 
 	//writer.Header().Set("X-CSRF-Token", csrf.Token(context))
@@ -145,36 +140,36 @@ func (g *GraphQL) AddDirective(name string, directive interface{}) {
 	funcType := reflect.ValueOf(directive)
 
 	if funcType.Kind() != reflect.Func {
-		panic("Directive should be type of function")
+		g.Log.Alert(fmt.Errorf("directive should be type of function"))
 	}
 
 	newDirective := new(tools.SchemaDirectiveVisitor)
 
-	switch directive.(type) {
+	switch directive := directive.(type) {
 	case VisitSchema:
-		newDirective.VisitSchema = directive.(VisitSchema)
+		newDirective.VisitSchema = directive
 	case VisitScalar:
-		newDirective.VisitScalar = directive.(VisitScalar)
+		newDirective.VisitScalar = directive
 	case VisitObject:
-		newDirective.VisitObject = directive.(VisitObject)
+		newDirective.VisitObject = directive
 	case VisitFieldDefinition:
-		newDirective.VisitFieldDefinition = directive.(VisitFieldDefinition)
+		newDirective.VisitFieldDefinition = directive
 	case VisitArgumentDefinition:
-		newDirective.VisitArgumentDefinition = directive.(VisitArgumentDefinition)
+		newDirective.VisitArgumentDefinition = directive
 	case VisitInterface:
-		newDirective.VisitInterface = directive.(VisitInterface)
+		newDirective.VisitInterface = directive
 	case VisitUnion:
-		newDirective.VisitUnion = directive.(VisitUnion)
+		newDirective.VisitUnion = directive
 	case VisitEnum:
-		newDirective.VisitEnum = directive.(VisitEnum)
+		newDirective.VisitEnum = directive
 	case VisitEnumValue:
-		newDirective.VisitEnumValue = directive.(VisitEnumValue)
+		newDirective.VisitEnumValue = directive
 	case VisitInputObject:
-		newDirective.VisitInputObject = directive.(VisitInputObject)
+		newDirective.VisitInputObject = directive
 	case VisitInputFieldDefinition:
-		newDirective.VisitInputFieldDefinition = directive.(VisitInputFieldDefinition)
+		newDirective.VisitInputFieldDefinition = directive
 	default:
-		panic("Invalid directive definition")
+		g.Log.Alert(fmt.Errorf("invalid directive definition"))
 	}
 
 	g.directives[name] = newDirective

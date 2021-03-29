@@ -6,13 +6,12 @@ import (
 )
 
 func IsGranted(field *graphql.Field, args map[string]interface{}) {
-	resolveFunc := field.Resolve
 	field.Resolve = func(p graphql.ResolveParams) (interface{}, error) {
 		if !grantAccess() {
 			return nil, fmt.Errorf("I have no access to this resource")
 		}
 
-		result, err := resolveFunc(p)
+		result, err := field.Resolve(p)
 
 		if err != nil {
 			return result, err

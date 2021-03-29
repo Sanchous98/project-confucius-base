@@ -9,24 +9,28 @@ import (
 )
 
 type (
+	// Service represents an entity in a microservice architecture
 	Service interface {
-		Make(Container) Service
+		Constructor()
+		Destructor()
 	}
 
+	// Launchable Base interface. Represents a Service that can be launched in a separate thread
 	Launchable interface {
 		Launch(chan<- error)
 		Shutdown(chan<- error)
 	}
 
+	// Launcher Base interface. Represent entity that launches and shuts down services
 	Launcher interface {
 		Launch()
 		Shutdown(chan<- error)
 	}
 
-	// Basic Container interface
+	// Container Base interface. Conducts services
 	Container interface {
-		Get(Service) Service
-		Has(Service) bool
+		Get(reflect.Type) Service
+		Has(reflect.Type) bool
 		Set(Service)
 		Launcher
 	}
@@ -40,13 +44,16 @@ func NewContainer() *serviceContainer {
 	return &serviceContainer{make([]*containerEntry, 0)}
 }
 
+// Set bins a singleton service.
+// If you want to use a new instance on every binding, container will resolve it automatically
 func (s *serviceContainer) Set(service Service) {
-	s.services = append(s.services, NewEntry(reflect.TypeOf(service), service))
+	s.services = append(s.services, NewEntry(service))
 }
 
-func (s *serviceContainer) Get(abstraction Service) Service {
+// Get returns bound service
+func (s *serviceContainer) Get(abstraction reflect.Type) Service {
 	for _, service := range s.services {
-		if service.Abstraction == reflect.TypeOf(abstraction) {
+		if reflect.TypeOf(service.service) == abstraction {
 			return service.Make(s)
 		}
 	}
@@ -54,27 +61,29 @@ func (s *serviceContainer) Get(abstraction Service) Service {
 	return nil
 }
 
-func (s *serviceContainer) Has(abstraction Service) bool {
+// Has checks, if a service is bound
+func (s *serviceContainer) Has(abstraction reflect.Type) bool {
 	return s.Get(abstraction) != nil
 }
 
-func (s *serviceContainer) drop(abstraction Service) {
+func (s *serviceContainer) drop(abstraction reflect.Type) {
 	if !s.Has(abstraction) {
 		return
 	}
 
 	for index, service := range s.services {
-		if service.Abstraction == reflect.TypeOf(abstraction) {
+		if reflect.TypeOf(service.service) == abstraction {
 			s.services = append(s.services[:index], s.services[index+1:]...)
 			return
 		}
 	}
 }
 
+// TODO: Move into app
 func (s *serviceContainer) Launch() {
 	err := make(chan error)
 	osSignals := make(chan os.Signal)
-	signal.Notify(osSignals, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(osSignals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 	for _, service := range s.services {
 		service.Make(s)
 	}

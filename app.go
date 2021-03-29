@@ -3,7 +3,6 @@ package confucius
 import (
 	"github.com/Sanchous98/project-confucius-base/src"
 	"github.com/joho/godotenv"
-	"os"
 	"sync"
 )
 
@@ -15,23 +14,35 @@ var (
 type Application struct {
 	environment string
 	variables   map[string]string
-	Container   src.Container
+	container   src.Container
 }
 
 func NewApplication(environment string, container src.Container) *Application {
 	app := new(Application)
 	app.SetEnvironment(environment)
-	app.Container = container
+	app.container = container
 
 	return app
 }
 
 func App() *Application {
 	once.Do(func() {
-		application = NewApplication(os.Getenv("APP_ENV"), src.NewContainer())
+		application = NewApplication("", src.NewContainer())
 	})
 
 	return application
+}
+
+func (a *Application) Bind(services ...src.Service) *Application {
+	for _, service := range services {
+		a.container.Set(service)
+	}
+
+	return a
+}
+
+func (a Application) Launch() {
+	a.container.Launch()
 }
 
 func (a *Application) SetEnvironment(name string) {
