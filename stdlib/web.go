@@ -104,23 +104,23 @@ func (w *Web) Launch(err chan<- error) {
 			for _, route := range entryPoint.Routes {
 				switch route.Method {
 				case MethodGet:
-					w.router.GET(group+"."+route.Path, route.Handler)
+					w.router.GET("/"+group+route.Path, route.Handler)
 				case MethodHead:
-					w.router.HEAD(group+"."+route.Path, route.Handler)
+					w.router.HEAD("/"+group+route.Path, route.Handler)
 				case MethodPost:
-					w.router.POST(group+"."+route.Path, route.Handler)
+					w.router.POST("/"+group+route.Path, route.Handler)
 				case MethodPut:
-					w.router.PUT(group+"."+route.Path, route.Handler)
+					w.router.PUT("/"+group+route.Path, route.Handler)
 				case MethodPatch:
-					w.router.PATCH(group+"."+route.Path, route.Handler)
+					w.router.PATCH("/"+group+route.Path, route.Handler)
 				case MethodDelete:
-					w.router.DELETE(group+"."+route.Path, route.Handler)
+					w.router.DELETE("/"+group+route.Path, route.Handler)
 				case MethodConnect:
-					w.router.CONNECT(group+"."+route.Path, route.Handler)
+					w.router.CONNECT("/"+group+route.Path, route.Handler)
 				case MethodOptions:
-					w.router.OPTIONS(group+"."+route.Path, route.Handler)
+					w.router.OPTIONS("/"+group+route.Path, route.Handler)
 				case MethodTrace:
-					w.router.TRACE(group+"."+route.Path, route.Handler)
+					w.router.TRACE("/"+group+route.Path, route.Handler)
 				}
 			}
 		}
@@ -175,6 +175,10 @@ func (w *Web) Constructor() {
 func (w *Web) Destructor() {}
 
 func (w *Web) AddEntryPoint(entryPoint *EntryPoint, group string) {
+	if w.entryPoints == nil {
+		w.entryPoints = make(map[string][]*EntryPoint)
+	}
+
 	w.entryPoints[group] = append(w.entryPoints[group], entryPoint)
 }
 
