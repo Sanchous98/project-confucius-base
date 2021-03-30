@@ -11,6 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 	"log"
 	"net"
+	"net/http"
 )
 
 const webConfigPath = "config/web.yaml"
@@ -67,23 +68,23 @@ type (
 func (m Method) String() string {
 	switch m {
 	case MethodGet:
-		return fasthttp.MethodGet
+		return http.MethodGet
 	case MethodHead:
-		return fasthttp.MethodHead
+		return http.MethodHead
 	case MethodPost:
-		return fasthttp.MethodPost
+		return http.MethodPost
 	case MethodPut:
-		return fasthttp.MethodPut
+		return http.MethodPut
 	case MethodPatch:
-		return fasthttp.MethodPatch
+		return http.MethodPatch
 	case MethodDelete:
-		return fasthttp.MethodDelete
+		return http.MethodDelete
 	case MethodConnect:
-		return fasthttp.MethodConnect
+		return http.MethodConnect
 	case MethodOptions:
-		return fasthttp.MethodOptions
+		return http.MethodOptions
 	case MethodTrace:
-		return fasthttp.MethodTrace
+		return http.MethodTrace
 	default:
 		return ""
 	}
