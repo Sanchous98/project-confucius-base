@@ -12,7 +12,7 @@ import (
 const loggerConfigPath = "config/logger.yaml"
 
 const (
-	debugLevel level = 1 << iota
+	debugLevel level = iota
 	infoLevel
 	noticeLevel
 	warningLevel

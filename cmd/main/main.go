@@ -8,6 +8,6 @@ import (
 func main() {
 	confucius.
 		App().
-		Bind(&stdlib.Web{}, &stdlib.Static{}, &stdlib.GraphQL{}).
+		Bind(&stdlib.Web{}, &stdlib.Static{}).
 		Launch()
 }

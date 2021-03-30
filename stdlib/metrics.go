@@ -15,7 +15,17 @@ type Metrics struct {
 }
 
 func (m *Metrics) Constructor() {
-	m.Web.Router.GET("/metrics", fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()))
+	m.Web.AddEntryPoint(&EntryPoint{
+		[]*Route{
+			{
+				MethodGet,
+				"/",
+				fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()),
+			},
+		},
+		"metrics",
+		"/metrics",
+	}, "metrics")
 }
 
 func (m *Metrics) Destructor() {}

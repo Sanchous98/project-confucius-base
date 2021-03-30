@@ -41,7 +41,7 @@ func (s *Static) Constructor() {
 	}
 
 	fs.PathRewrite = fasthttp.NewVHostPathRewriter(0)
-	s.Web.Router.ServeFilesCustom("/{filepath:*}", fs)
+	s.Web.router.ServeFilesCustom("/{filepath:*}", fs)
 }
 
 func (s *Static) Destructor() {}

@@ -15,7 +15,21 @@ import (
 
 const webConfigPath = "config/web.yaml"
 
+const (
+	MethodGet Method = iota
+	MethodHead
+	MethodPost
+	MethodPut
+	MethodPatch
+	MethodDelete
+	MethodConnect
+	MethodOptions
+	MethodTrace
+)
+
 type (
+	Method uint8
+
 	webConfig struct {
 		CertsPath   string `yaml:"certs_path"`
 		Addr        string
@@ -29,13 +43,51 @@ type (
 
 	Web struct {
 		config      *webConfig
-		Server      *fasthttp.Server
-		Router      *router.Router
-		CertManager *autocert.Manager
-		TLSConfig   *tls.Config
+		router      *router.Router
+		server      *fasthttp.Server
+		certManager *autocert.Manager
+		tlsConfig   *tls.Config
 		Log         *Log `inject:""`
+		entryPoints map[string][]*EntryPoint
+	}
+
+	Route struct {
+		Method  Method
+		Path    string
+		Handler fasthttp.RequestHandler
+	}
+
+	EntryPoint struct {
+		Routes      []*Route
+		Name        string
+		RoutePrefix string
 	}
 )
+
+func (m Method) String() string {
+	switch m {
+	case MethodGet:
+		return fasthttp.MethodGet
+	case MethodHead:
+		return fasthttp.MethodHead
+	case MethodPost:
+		return fasthttp.MethodPost
+	case MethodPut:
+		return fasthttp.MethodPut
+	case MethodPatch:
+		return fasthttp.MethodPatch
+	case MethodDelete:
+		return fasthttp.MethodDelete
+	case MethodConnect:
+		return fasthttp.MethodConnect
+	case MethodOptions:
+		return fasthttp.MethodOptions
+	case MethodTrace:
+		return fasthttp.MethodTrace
+	default:
+		return ""
+	}
+}
 
 func (c *webConfig) Unmarshall() error {
 	return utils.Unmarshall(c, webConfigPath, yaml.Unmarshal)
@@ -46,12 +98,39 @@ func (c *webConfig) getFullAddress() string {
 }
 
 func (w *Web) Launch(err chan<- error) {
-	if w.config.Compression.Enabled {
-		fasthttp.CompressHandlerBrotliLevel(w.Router.Handler, w.config.Compression.Level, w.config.Compression.Level)
+	for group, entryPoints := range w.entryPoints {
+		for _, entryPoint := range entryPoints {
+			for _, route := range entryPoint.Routes {
+				switch route.Method {
+				case MethodGet:
+					w.router.GET(group+"."+route.Path, route.Handler)
+				case MethodHead:
+					w.router.HEAD(group+"."+route.Path, route.Handler)
+				case MethodPost:
+					w.router.POST(group+"."+route.Path, route.Handler)
+				case MethodPut:
+					w.router.PUT(group+"."+route.Path, route.Handler)
+				case MethodPatch:
+					w.router.PATCH(group+"."+route.Path, route.Handler)
+				case MethodDelete:
+					w.router.DELETE(group+"."+route.Path, route.Handler)
+				case MethodConnect:
+					w.router.CONNECT(group+"."+route.Path, route.Handler)
+				case MethodOptions:
+					w.router.OPTIONS(group+"."+route.Path, route.Handler)
+				case MethodTrace:
+					w.router.TRACE(group+"."+route.Path, route.Handler)
+				}
+			}
+		}
 	}
 
-	w.Server = &fasthttp.Server{
-		Handler: w.Router.Handler,
+	if w.config.Compression.Enabled {
+		fasthttp.CompressHandlerBrotliLevel(w.router.Handler, w.config.Compression.Level, w.config.Compression.Level)
+	}
+
+	w.server = &fasthttp.Server{
+		Handler: w.router.Handler,
 	}
 
 	log.Print("Server started")
@@ -64,32 +143,55 @@ func (w *Web) Launch(err chan<- error) {
 			err <- e
 		}
 
-		lnTls := tls.NewListener(ln, w.TLSConfig)
-		err <- w.Server.Serve(lnTls)
+		lnTls := tls.NewListener(ln, w.tlsConfig)
+		err <- w.server.Serve(lnTls)
 	} else {
-		err <- w.Server.ListenAndServe(w.config.getFullAddress())
+		err <- w.server.ListenAndServe(w.config.getFullAddress())
 	}
 }
 
 func (w *Web) Shutdown(chan<- error) {
-	w.Server.DisableKeepalive = true
+	w.server.DisableKeepalive = true
 }
 
 func (w *Web) Constructor() {
 	w.config = new(webConfig)
 	_ = w.config.Unmarshall()
 
-	w.Router = router.New()
-	w.CertManager = &autocert.Manager{
+	w.router = router.New()
+	w.certManager = &autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
 		HostPolicy: autocert.HostWhitelist(w.config.Whitelist...),
 		Cache:      autocert.DirCache(w.config.CertsPath),
 	}
 
-	w.TLSConfig = &tls.Config{
-		GetCertificate: w.CertManager.GetCertificate,
+	w.tlsConfig = &tls.Config{
+		GetCertificate: w.certManager.GetCertificate,
 		NextProtos:     []string{"http/1.1", acme.ALPNProto},
 	}
 }
 
 func (w *Web) Destructor() {}
+
+func (w *Web) AddEntryPoint(entryPoint *EntryPoint, group string) {
+	w.entryPoints[group] = append(w.entryPoints[group], entryPoint)
+}
+
+func (w *Web) DropEntryPoint(name string, group string) {
+	for index, entryPoint := range w.entryPoints[group] {
+		if entryPoint.Name == name {
+			w.entryPoints[group] = append(w.entryPoints[group][:index], w.entryPoints[group][index+1:]...)
+			return
+		}
+	}
+}
+
+func (w *Web) EntryPointExists(name string, group string) bool {
+	for _, entryPoint := range w.entryPoints[group] {
+		if entryPoint.Name == name {
+			return true
+		}
+	}
+
+	return false
+}
