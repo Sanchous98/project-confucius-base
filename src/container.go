@@ -81,6 +81,7 @@ func (s *serviceContainer) drop(abstraction reflect.Type) {
 
 // TODO: Move into app
 func (s *serviceContainer) Launch() {
+	// TODO: Sort dependencies
 	err := make(chan error)
 	osSignals := make(chan os.Signal)
 	signal.Notify(osSignals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
