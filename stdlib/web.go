@@ -151,7 +151,7 @@ func (w *Web) Launch(err chan<- error) {
 }
 
 func (w *Web) Shutdown(chan<- error) {
-	w.server.DisableKeepalive = true
+=	w.server.DisableKeepalive = true
 }
 
 func (w *Web) Constructor() {
@@ -159,7 +159,7 @@ func (w *Web) Constructor() {
 	_ = w.config.Unmarshall()
 
 	w.router = router.New()
-	w.certManager = &autocert.Manager{
+	w.certManager = &autocert.Manager{]
 		Prompt:     autocert.AcceptTOS,
 		HostPolicy: autocert.HostWhitelist(w.config.Whitelist...),
 		Cache:      autocert.DirCache(w.config.CertsPath),
