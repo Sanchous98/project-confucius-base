@@ -102,6 +102,16 @@ func (w *Web) Launch(err chan<- error) {
 	for group, entryPoints := range w.entryPoints {
 		for _, entryPoint := range entryPoints {
 			for _, route := range entryPoint.Routes {
+				if route.Path[0] != byte('/') {
+					w.Log.Error(
+						fmt.Errorf(
+							"path must begin with '/' in entry point '%s', path '%s'. Skipping route",
+							entryPoint.Name,
+							route.Path,
+						),
+					)
+					continue
+				}
 				switch route.Method {
 				case MethodGet:
 					w.router.GET("/"+group+route.Path, route.Handler)
