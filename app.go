@@ -4,6 +4,7 @@ import (
 	"github.com/Sanchous98/project-confucius-base/src"
 	"github.com/Sanchous98/project-confucius-base/stdlib"
 	"github.com/joho/godotenv"
+	"os"
 	"sync"
 )
 
@@ -62,6 +63,18 @@ func (a *application) SetEnvironment(name string) {
 	a.variables, err = godotenv.Read(envFileName)
 
 	if err != nil {
-		panic(err)
+		_, err = os.Create(envFileName)
+
+		if err != nil {
+			panic(err)
+		}
 	}
+}
+
+func Getenv(name string) string {
+	return App().variables[name]
+}
+
+func Setenv(name, value string) {
+	App().variables[name] = value
 }
