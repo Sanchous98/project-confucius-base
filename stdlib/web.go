@@ -98,6 +98,7 @@ func (c *webConfig) getFullAddress() string {
 	return fmt.Sprintf("%s:%d", c.Addr, c.Port)
 }
 
+// Launch web
 func (w *Web) Launch(err chan<- error) {
 	for group, entryPoints := range w.entryPoints {
 		for _, entryPoint := range entryPoints {

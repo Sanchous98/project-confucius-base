@@ -21,7 +21,7 @@ func fillService(service Service, container Container) {
 		field := s.Field(i)
 		dependencyType := field.Type()
 
-		if container.Has(dependencyType) {
+		if container != nil && container.Has(dependencyType) {
 			newService = reflect.ValueOf(container.Get(dependencyType))
 		} else if dependencyType.Implements(interfaceType) {
 			newService = reflect.New(dependencyType.Elem())

@@ -1,13 +1,7 @@
 package main
 
-import (
-	confucius "github.com/Sanchous98/project-confucius-base"
-	"github.com/Sanchous98/project-confucius-base/stdlib"
-)
+import confucius "github.com/Sanchous98/project-confucius-base"
 
 func main() {
-	confucius.
-		App().
-		Bind(&stdlib.Web{}, &stdlib.Static{}).
-		Launch()
+	confucius.App().Launch()
 }

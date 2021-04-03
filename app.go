@@ -2,38 +2,44 @@ package confucius
 
 import (
 	"github.com/Sanchous98/project-confucius-base/src"
+	"github.com/Sanchous98/project-confucius-base/stdlib"
 	"github.com/joho/godotenv"
 	"sync"
 )
 
 var (
-	application *Application
-	once        sync.Once
+	app  *application
+	once sync.Once
 )
 
-type Application struct {
+type application struct {
 	environment string
 	variables   map[string]string
 	container   src.Container
 }
 
-func NewApplication(environment string, container src.Container) *Application {
-	app := new(Application)
+func NewApplication(environment string, container src.Container) *application {
+	app := new(application)
 	app.SetEnvironment(environment)
 	app.container = container
 
 	return app
 }
 
-func App() *Application {
+func App() *application {
 	once.Do(func() {
-		application = NewApplication("", src.NewContainer())
+		app = NewApplication("", src.NewContainer())
+		app.bootstrap()
 	})
 
-	return application
+	return app
 }
 
-func (a *Application) Bind(services ...src.Service) *Application {
+func (a *application) bootstrap() {
+	a.Bind(&stdlib.Web{}, &stdlib.Static{}).Launch()
+}
+
+func (a *application) Bind(services ...src.Service) *application {
 	for _, service := range services {
 		a.container.Set(service)
 	}
@@ -41,11 +47,11 @@ func (a *Application) Bind(services ...src.Service) *Application {
 	return a
 }
 
-func (a Application) Launch() {
+func (a application) Launch() {
 	a.container.Launch()
 }
 
-func (a *Application) SetEnvironment(name string) {
+func (a *application) SetEnvironment(name string) {
 	var err error
 	envFileName := ".env"
 
