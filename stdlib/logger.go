@@ -129,6 +129,7 @@ func (l *Log) Alert(message error, context ...interface{}) {
 func (l *Log) Emergency(message error, context ...interface{}) {
 	l.Log(emergencyLevel, message, context)
 	err := syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+
 	if err != nil {
 		return
 	}

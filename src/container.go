@@ -17,7 +17,9 @@ type (
 
 	// Launchable Base interface. Represents a Service that can be launched in a separate thread
 	Launchable interface {
+		// Launch method is a service coroutine
 		Launch(chan<- error)
+		// Shutdown terminates service coroutine
 		Shutdown(chan<- error)
 	}
 
