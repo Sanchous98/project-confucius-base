@@ -42,7 +42,7 @@ func main() {
 }
 ```
 
-If you want to make a long-living service, you should implement ```Launhable``` interface
+If you want to make a long-living service, you should implement ```Launchable``` interface
 ```go
 type Service struct {
   Log *Log `inject:""`
