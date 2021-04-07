@@ -4,6 +4,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
+	"github.com/valyala/fasthttp/pprofhandler"
 	_ "net/http/pprof"
 	"sync"
 )
@@ -19,13 +20,16 @@ func (m *Metrics) Constructor() {
 		[]*Route{
 			{
 				MethodGet,
-				"/",
+				"/prometheus",
 				fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()),
 			},
+			{
+				MethodGet,
+				"/pprof/{path:*}",
+				pprofhandler.PprofHandler,
+			},
 		},
-		"metrics",
-		"/metrics",
-	}, "metrics")
+		"debug",
+		"/debug",
+	}, "debug")
 }
-
-func (m *Metrics) Destructor() {}

@@ -4,13 +4,16 @@ import (
 	"github.com/Sanchous98/project-confucius-base/utils"
 	"github.com/valyala/fasthttp"
 	"gopkg.in/yaml.v3"
+	"path/filepath"
 )
 
 const staticConfigPath = "config/static.yaml"
 
 type (
 	staticConfig struct {
-		Path string
+		Path     string
+		Compress bool
+		Indexes  []string
 	}
 
 	Static struct {
@@ -32,16 +35,22 @@ func (s *Static) Constructor() {
 		s.Log.Critical(err)
 	}
 
+	path, err := filepath.Abs(s.config.Path)
+
 	fs := &fasthttp.FS{
-		Root:               s.config.Path,
-		IndexNames:         []string{"index.html"},
-		GenerateIndexPages: true,
+		Root:               path,
+		IndexNames:         s.config.Indexes,
+		GenerateIndexPages: false,
 		AcceptByteRange:    true,
-		CompressBrotli:     true,
+		CompressBrotli:     s.config.Compress,
 	}
 
-	fs.PathRewrite = fasthttp.NewVHostPathRewriter(0)
-	s.Web.router.ServeFilesCustom("/{filepath:*}", fs)
+	s.Web.AddEntryPoint(&EntryPoint{
+		[]*Route{{
+			MethodGet,
+			"/{filepath:*}",
+			fs.NewRequestHandler(),
+		}},
+		"", "",
+	}, "")
 }
-
-func (s *Static) Destructor() {}
