@@ -11,12 +11,15 @@ type mockServ interface {
 	Service
 }
 
+type notServ struct{}
 type extraServ struct{}
 type bindServ struct {
 	Service *extraServ `inject:""`
 }
 type fillServ struct {
-	Service *bindServ `inject:""`
+	Service    *bindServ `inject:""`
+	Other      *bindServ
+	NotService *notServ `inject:""`
 }
 type interfaceServ struct {
 	Service *mockServ `inject:""`
@@ -24,16 +27,12 @@ type interfaceServ struct {
 
 func (m *fillServ) Test()             {}
 func (m *fillServ) Constructor()      {}
-func (m *fillServ) Destructor()       {}
 func (m *bindServ) Test()             {}
 func (m *bindServ) Constructor()      {}
-func (m *bindServ) Destructor()       {}
 func (m *extraServ) Test()            {}
 func (m *extraServ) Constructor()     {}
-func (m *extraServ) Destructor()      {}
 func (m *interfaceServ) Test()        {}
 func (m *interfaceServ) Constructor() {}
-func (m *interfaceServ) Destructor()  {}
 
 func TestSingletonBinding(t *testing.T) {
 	container := NewContainer()
@@ -58,6 +57,8 @@ func TestStructBinding(t *testing.T) {
 	assert.NotPanics(t, func() { fillService(serv, container) })
 	assert.NotPanics(t, func() { fillService(serv2, container) })
 	assert.NotNil(t, serv.Service)
+	assert.Nil(t, serv.Other)
+	assert.Nil(t, serv.NotService)
 	assert.NotNil(t, serv2.Service)
 }
 

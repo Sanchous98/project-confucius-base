@@ -1,1 +1,4 @@
-path: "public"
+path: public
+compress: false
+indexes:
+  - index.html

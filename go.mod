@@ -3,7 +3,7 @@ module github.com/Sanchous98/project-confucius-base
 go 1.16
 
 require (
-	github.com/fasthttp/router v1.3.10
+	github.com/fasthttp/router v1.3.11
 	github.com/fatih/color v1.10.0
 	github.com/joho/godotenv v1.3.0
 	github.com/prometheus/client_golang v1.10.0

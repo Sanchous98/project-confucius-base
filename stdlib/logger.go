@@ -2,6 +2,7 @@ package stdlib
 
 import (
 	"fmt"
+	"github.com/Sanchous98/project-confucius-base/src"
 	"github.com/Sanchous98/project-confucius-base/utils"
 	"github.com/fatih/color"
 	"gopkg.in/yaml.v3"
@@ -22,9 +23,9 @@ const (
 	emergencyLevel
 )
 
-type (
-	level uint8
+type level uint8
 
+type (
 	Logger interface {
 		Log(level, error, ...interface{})
 		Debug(error, ...interface{})
@@ -35,12 +36,13 @@ type (
 		Critical(error, ...interface{})
 		Alert(error, ...interface{})
 		Emergency(error, ...interface{})
+		Channel(string) Logger
+		src.Service
 	}
 
 	Log struct {
 		config  *loggerConfig
 		channel io.Writer
-		recover func(...interface{})
 	}
 
 	loggerConfig struct {
@@ -52,19 +54,9 @@ func (c *loggerConfig) Unmarshall() error {
 	return utils.Unmarshall(c, loggerConfigPath, yaml.Unmarshal)
 }
 
-func (l *Log) Constructor() {
-	l.config = new(loggerConfig)
-	_ = l.config.Unmarshall()
-	l.recover = func(i ...interface{}) {
-		if recoveryMessage := recover(); recoveryMessage != nil {
-			l.Critical(fmt.Errorf("%s", recoveryMessage), i)
-		}
-	}
-}
+func (l *Log) Constructor() {}
 
-func (l *Log) Destructor() {}
-
-func (l *Log) Channel(channel string) *Log {
+func (l *Log) Channel(channel string) Logger {
 	log := new(Log)
 	log.Constructor()
 	log.channel = log.config.Channels[channel]
@@ -122,7 +114,6 @@ func (l *Log) Critical(message error, context ...interface{}) {
 
 func (l *Log) Alert(message error, context ...interface{}) {
 	l.Log(alertLevel, message, context)
-	defer l.recover(context)
 	panic(message.Error())
 }
 

@@ -1,6 +1,8 @@
 package src
 
-import "sync"
+import (
+	"sync"
+)
 
 // containerEntry is a wrapper for bound services. Makes a singleton
 type containerEntry struct {
@@ -13,7 +15,7 @@ func NewEntry(service Service) *containerEntry {
 	return &containerEntry{service: service}
 }
 
-func (c *containerEntry) Make(container Container) Service {
+func (c *containerEntry) make(container Container) Service {
 	c.Do(func() {
 		c.RLock()
 		fillService(c.service, container)

@@ -12,6 +12,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"sync"
 )
 
 const webConfigPath = "config/web.yaml"
@@ -29,6 +30,7 @@ const (
 )
 
 type (
+	// Method type is an integer version of http package methods, because switch works faster on integers
 	Method uint8
 
 	webConfig struct {
@@ -42,6 +44,7 @@ type (
 		Whitelist []string `yaml:"whitelist"`
 	}
 
+	// Web is a main http server
 	Web struct {
 		config      *webConfig
 		router      *router.Router
@@ -50,14 +53,17 @@ type (
 		tlsConfig   *tls.Config
 		Log         *Log `inject:""`
 		entryPoints map[string][]*EntryPoint
+		sync.Once
 	}
 
+	// Route is an abstraction over fasthttp routes. Contains HTTP Method, path and handler
 	Route struct {
 		Method  Method
 		Path    string
 		Handler fasthttp.RequestHandler
 	}
 
+	// EntryPoint is an abstraction over Route. Represents a collection of routes, united by group and prefix
 	EntryPoint struct {
 		Routes      []*Route
 		Name        string
@@ -98,79 +104,84 @@ func (c *webConfig) getFullAddress() string {
 	return fmt.Sprintf("%s:%d", c.Addr, c.Port)
 }
 
-// Launch web
-func (w *Web) Launch(err chan<- error) {
-	for group, entryPoints := range w.entryPoints {
-		for _, entryPoint := range entryPoints {
-			for _, route := range entryPoint.Routes {
-				if route.Path[0] != byte('/') {
-					w.Log.Error(
-						fmt.Errorf(
-							"path must begin with '/' in entry point '%s', path '%s'. Skipping route",
-							entryPoint.Name,
-							route.Path,
-						),
-					)
-					continue
-				}
-				switch route.Method {
-				case MethodGet:
-					w.router.GET("/"+group+route.Path, route.Handler)
-				case MethodHead:
-					w.router.HEAD("/"+group+route.Path, route.Handler)
-				case MethodPost:
-					w.router.POST("/"+group+route.Path, route.Handler)
-				case MethodPut:
-					w.router.PUT("/"+group+route.Path, route.Handler)
-				case MethodPatch:
-					w.router.PATCH("/"+group+route.Path, route.Handler)
-				case MethodDelete:
-					w.router.DELETE("/"+group+route.Path, route.Handler)
-				case MethodConnect:
-					w.router.CONNECT("/"+group+route.Path, route.Handler)
-				case MethodOptions:
-					w.router.OPTIONS("/"+group+route.Path, route.Handler)
-				case MethodTrace:
-					w.router.TRACE("/"+group+route.Path, route.Handler)
+// Launch web server
+func (w *Web) Launch() {
+	w.server.Handler = w.router.Handler
+
+	w.Do(func() {
+		for _, entryPoints := range w.entryPoints {
+			for _, entryPoint := range entryPoints {
+				for _, route := range entryPoint.Routes {
+					if route.Path[0] != byte('/') {
+						w.Log.Error(
+							fmt.Errorf(
+								"path must begin with '/' in entry point '%s', path '%s'. Skipping route",
+								entryPoint.Name,
+								route.Path,
+							),
+						)
+						continue
+					}
+					switch route.Method {
+					case MethodGet:
+						w.router.GET(entryPoint.RoutePrefix+route.Path, route.Handler)
+					case MethodHead:
+						w.router.HEAD(entryPoint.RoutePrefix+route.Path, route.Handler)
+					case MethodPost:
+						w.router.POST(entryPoint.RoutePrefix+route.Path, route.Handler)
+					case MethodPut:
+						w.router.PUT(entryPoint.RoutePrefix+route.Path, route.Handler)
+					case MethodPatch:
+						w.router.PATCH(entryPoint.RoutePrefix+route.Path, route.Handler)
+					case MethodDelete:
+						w.router.DELETE(entryPoint.RoutePrefix+route.Path, route.Handler)
+					case MethodConnect:
+						w.router.CONNECT(entryPoint.RoutePrefix+route.Path, route.Handler)
+					case MethodOptions:
+						w.router.OPTIONS(entryPoint.RoutePrefix+route.Path, route.Handler)
+					case MethodTrace:
+						w.router.TRACE(entryPoint.RoutePrefix+route.Path, route.Handler)
+					}
 				}
 			}
 		}
-	}
+	})
 
 	if w.config.Compression.Enabled {
 		fasthttp.CompressHandlerBrotliLevel(w.router.Handler, w.config.Compression.Level, w.config.Compression.Level)
 	}
-
-	w.server = &fasthttp.Server{
-		Handler: w.router.Handler,
-	}
-
-	log.Print("Server started")
 
 	// Let's Encrypt tls-alpn-01 only works on Port 443.
 	if w.config.Port == 443 {
 		ln, e := net.Listen("tcp4", w.config.getFullAddress())
 
 		if e != nil {
-			err <- e
+			panic(e)
 		}
 
+		log.Printf("Server started on https://%s", w.config.getFullAddress())
 		lnTls := tls.NewListener(ln, w.tlsConfig)
-		err <- w.server.Serve(lnTls)
+		panic(w.server.Serve(lnTls))
 	} else {
-		err <- w.server.ListenAndServe(w.config.getFullAddress())
+		log.Printf("Server started on http://%s", w.config.getFullAddress())
+		panic(w.server.ListenAndServe(w.config.getFullAddress()))
 	}
 }
 
-func (w *Web) Shutdown(chan<- error) {
+// Shutdown web server
+func (w *Web) Shutdown() {
 	w.server.DisableKeepalive = true
 }
 
 func (w *Web) Constructor() {
 	w.config = new(webConfig)
-	_ = w.config.Unmarshall()
-
+	err := w.config.Unmarshall()
+	if err != nil {
+		w.Log.Emergency(err)
+	}
 	w.router = router.New()
+	w.server = &fasthttp.Server{}
+
 	w.certManager = &autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
 		HostPolicy: autocert.HostWhitelist(w.config.Whitelist...),
@@ -182,8 +193,6 @@ func (w *Web) Constructor() {
 		NextProtos:     []string{"http/1.1", acme.ALPNProto},
 	}
 }
-
-func (w *Web) Destructor() {}
 
 func (w *Web) AddEntryPoint(entryPoint *EntryPoint, group string) {
 	if w.entryPoints == nil {
