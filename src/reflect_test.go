@@ -11,6 +11,8 @@ type mockServ interface {
 	Service
 }
 
+var container = NewContainer()
+
 type notServ struct{}
 type extraServ struct{}
 type bindServ struct {
@@ -70,4 +72,22 @@ func TestInterfaceBinding(t *testing.T) {
 	//assert.True(t, container.Has(reflect.TypeOf(serv)))
 	//assert.NotPanics(t, func() { fillService(intServ, container) })
 	//assert.NotNil(t, intServ.Service)
+}
+
+func BenchmarkName(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		initServ(&fillServ{})
+	}
+}
+
+func BenchmarkFillService(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		fillService(&fillServ{}, container)
+	}
+}
+
+func initServ(serv *fillServ) {
+	b := &bindServ{}
+	b.Service = &extraServ{}
+	serv.Service = b
 }

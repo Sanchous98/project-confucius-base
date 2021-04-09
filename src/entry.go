@@ -1,8 +1,6 @@
 package src
 
-import (
-	"sync"
-)
+import "sync"
 
 // containerEntry is a wrapper for bound services. Makes a singleton
 type containerEntry struct {
