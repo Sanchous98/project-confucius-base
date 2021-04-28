@@ -16,20 +16,17 @@ type Metrics struct {
 }
 
 func (m *Metrics) Constructor() {
-	m.Web.AddEntryPoint(&EntryPoint{
-		[]*Route{
-			{
-				MethodGet,
-				"/prometheus",
-				fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()),
-			},
-			{
-				MethodGet,
-				"/pprof/{path:*}",
-				pprofhandler.PprofHandler,
-			},
-		},
-		"debug",
-		"/debug",
-	}, "debug")
+	entrypoint := NewEntryPoint("debug", "/debug")
+	entrypoint.AddRoute(&Route{
+		MethodGet,
+		"/prometheus",
+		fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler()),
+	})
+	entrypoint.AddRoute(&Route{
+		MethodGet,
+		"/pprof/{path:*}",
+		pprofhandler.PprofHandler,
+	})
+
+	m.Web.AddEntryPoint(entrypoint, "debug")
 }
