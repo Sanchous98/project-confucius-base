@@ -33,6 +33,9 @@ type (
 	// Method type is an integer version of http package methods, because switch works faster on integers
 	Method uint8
 
+	// Middleware makes some actions before request handling
+	Middleware func(fasthttp.RequestHandler) fasthttp.RequestHandler
+
 	webConfig struct {
 		CertsPath   string `yaml:"certs_path"`
 		Addr        string
@@ -68,8 +71,21 @@ type (
 		Routes      []*Route
 		Name        string
 		RoutePrefix string
+		Middlewares []Middleware
 	}
 )
+
+func NewEntryPoint(name, prefix string) *EntryPoint {
+	return &EntryPoint{make([]*Route, 0), name, prefix, make([]Middleware, 0)}
+}
+
+func (e *EntryPoint) AddRoute(route *Route) {
+	e.Routes = append(e.Routes, route)
+}
+
+func (e *EntryPoint) AddMiddleware(middleware Middleware) {
+	e.Middlewares = append(e.Middlewares, middleware)
+}
 
 func (m Method) String() string {
 	switch m {
@@ -112,6 +128,12 @@ func (w *Web) Launch() {
 		for _, entryPoints := range w.entryPoints {
 			for _, entryPoint := range entryPoints {
 				for _, route := range entryPoint.Routes {
+					handler := route.Handler
+
+					for _, middleware := range entryPoint.Middlewares {
+						handler = middleware(handler)
+					}
+
 					if route.Path[0] != byte('/') {
 						w.Log.Error(
 							fmt.Errorf(
@@ -124,23 +146,23 @@ func (w *Web) Launch() {
 					}
 					switch route.Method {
 					case MethodGet:
-						w.router.GET(entryPoint.RoutePrefix+route.Path, route.Handler)
+						w.router.GET(entryPoint.RoutePrefix+route.Path, handler)
 					case MethodHead:
-						w.router.HEAD(entryPoint.RoutePrefix+route.Path, route.Handler)
+						w.router.HEAD(entryPoint.RoutePrefix+route.Path, handler)
 					case MethodPost:
-						w.router.POST(entryPoint.RoutePrefix+route.Path, route.Handler)
+						w.router.POST(entryPoint.RoutePrefix+route.Path, handler)
 					case MethodPut:
-						w.router.PUT(entryPoint.RoutePrefix+route.Path, route.Handler)
+						w.router.PUT(entryPoint.RoutePrefix+route.Path, handler)
 					case MethodPatch:
-						w.router.PATCH(entryPoint.RoutePrefix+route.Path, route.Handler)
+						w.router.PATCH(entryPoint.RoutePrefix+route.Path, handler)
 					case MethodDelete:
-						w.router.DELETE(entryPoint.RoutePrefix+route.Path, route.Handler)
+						w.router.DELETE(entryPoint.RoutePrefix+route.Path, handler)
 					case MethodConnect:
-						w.router.CONNECT(entryPoint.RoutePrefix+route.Path, route.Handler)
+						w.router.CONNECT(entryPoint.RoutePrefix+route.Path, handler)
 					case MethodOptions:
-						w.router.OPTIONS(entryPoint.RoutePrefix+route.Path, route.Handler)
+						w.router.OPTIONS(entryPoint.RoutePrefix+route.Path, handler)
 					case MethodTrace:
-						w.router.TRACE(entryPoint.RoutePrefix+route.Path, route.Handler)
+						w.router.TRACE(entryPoint.RoutePrefix+route.Path, handler)
 					}
 				}
 			}

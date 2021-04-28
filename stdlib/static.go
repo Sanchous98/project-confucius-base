@@ -45,12 +45,12 @@ func (s *Static) Constructor() {
 		CompressBrotli:     s.config.Compress,
 	}
 
-	s.Web.AddEntryPoint(&EntryPoint{
-		[]*Route{{
-			MethodGet,
-			"/{filepath:*}",
-			fs.NewRequestHandler(),
-		}},
-		"", "",
-	}, "")
+	entrypoint := NewEntryPoint("", "")
+	entrypoint.AddRoute(&Route{
+		MethodGet,
+		"/{filepath:*}",
+		fs.NewRequestHandler(),
+	})
+
+	s.Web.AddEntryPoint(entrypoint, "")
 }
