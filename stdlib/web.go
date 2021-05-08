@@ -183,16 +183,22 @@ func (w *Web) Launch() {
 
 		log.Printf("Server started on https://%s", w.config.getFullAddress())
 		lnTls := tls.NewListener(ln, w.tlsConfig)
-		panic(w.server.Serve(lnTls))
+
+		if e = w.server.Serve(lnTls); e != nil {
+			w.Log.Alert(e)
+		}
 	} else {
 		log.Printf("Server started on http://%s", w.config.getFullAddress())
-		panic(w.server.ListenAndServe(w.config.getFullAddress()))
+		if e := w.server.ListenAndServe(w.config.getFullAddress()); e != nil {
+			w.Log.Alert(e)
+		}
 	}
 }
 
 // Shutdown web server
 func (w *Web) Shutdown() {
 	w.server.DisableKeepalive = true
+	w.Log.Info(w.server.Shutdown())
 }
 
 func (w *Web) Constructor() {
